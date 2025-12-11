@@ -1,17 +1,13 @@
 package in.codingstreams.ghost_drop.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
 
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Data
@@ -21,13 +17,29 @@ import java.time.LocalDateTime;
 public class FileMetadata {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
-  private String id;
+  @Column(nullable = false, updatable = false)
+  private UUID id;
+
+  @Column(nullable = false)
   private String fileName;
+
+  @Column(nullable = false)
   private String fileType;
+
+  @Column(nullable = false)
   private String storagePath;
+
+  @Column(nullable = false)
   private String accessCode;
-  @CreatedDate
-  private Timestamp uploadDate;
+
+  @Builder.Default
+  @Column(nullable = false, updatable = false)
+  private Timestamp uploadDate = new Timestamp(System.currentTimeMillis());
+
+  @Column(nullable = false)
   private Timestamp expiryDate;
-  private Integer maxDownloads;
+
+  @Builder.Default
+  @Column(nullable = false)
+  private Integer maxDownloads = -1;
 }
