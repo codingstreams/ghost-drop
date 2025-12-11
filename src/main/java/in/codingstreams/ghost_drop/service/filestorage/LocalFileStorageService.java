@@ -11,6 +11,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -42,16 +45,38 @@ public class LocalFileStorageService implements FileStorageService {
 
   @Override
   public String store(MultipartFile file) {
-    // TODO: Implement actual file saving to uploadDir
-    var filePath = StringUtils.cleanPath(file.getName());
+    log.info("Starting to store file: {}", file.getOriginalFilename());
 
-    if (StringUtils.hasText("..")) {
+    var originalFilename = Optional.ofNullable(file.getOriginalFilename())
+        .orElseThrow(() -> new RuntimeException("Filename cannot be null."));
+
+    var filePath = StringUtils.cleanPath(Objects.requireNonNull(originalFilename));
+    log.debug("Cleaned file path: {}", filePath);
+
+    if (filePath.contains("..")) {
+      log.error("Invalid file path detected: {}", filePath);
       throw new RuntimeException("Invalid file path.");
     }
 
-    var fileName = UUID.randomUUID().toString() + "-" + Path.of(filePath).getFileName();
+    try {
+      if (file.isEmpty()) {
+        log.warn("Attempted to store empty file: {}", filePath);
+        throw new RuntimeException("Cannot store empty file.");
+      }
 
-    return fileName;
+      var fileInputStream = file.getInputStream();
+      var fileName = UUID.randomUUID() + "-" + Path.of(filePath).getFileName();
+      log.debug("Generated unique filename: {}", fileName);
+
+      Path destination = Path.of(uploadDir, fileName);
+      Files.copy(fileInputStream, destination, StandardCopyOption.REPLACE_EXISTING);
+
+      log.info("File successfully stored at: {}", destination.toAbsolutePath());
+      return fileName;
+    } catch (IOException e) {
+      log.error("Failed to store file: {}", filePath, e);
+      throw new RuntimeException("File storage failed.", e);
+    }
   }
 
   @Override
