@@ -1,6 +1,5 @@
 package in.codingstreams.ghost_drop.controller;
 
-import in.codingstreams.ghost_drop.dto.FileDownloadWrapper;
 import in.codingstreams.ghost_drop.dto.FileUploadResponse;
 import in.codingstreams.ghost_drop.service.filesharing.FileSharingService;
 import lombok.RequiredArgsConstructor;
@@ -20,13 +19,13 @@ public class FileSharingController {
 
   @PostMapping("/upload")
   public ResponseEntity<FileUploadResponse> uploadFile(@RequestParam("file") MultipartFile file) {
-    FileUploadResponse response = fileSharingService.uploadFile(file);
+    var response = fileSharingService.uploadFile(file);
     return ResponseEntity.ok(response);
   }
 
-  @GetMapping("/{accessCode}")
+  @GetMapping("/download/{accessCode}")
   public ResponseEntity<Resource> downloadFile(@PathVariable String accessCode) {
-    FileDownloadWrapper wrapper = fileSharingService.getFile(accessCode);
+    var wrapper = fileSharingService.getFile(accessCode);
 
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + wrapper.originalFileName() + "\"")

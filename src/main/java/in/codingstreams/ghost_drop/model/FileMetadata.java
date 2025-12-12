@@ -42,4 +42,8 @@ public class FileMetadata {
   @Builder.Default
   @Column(nullable = false)
   private Integer maxDownloads = -1;
+
+  public boolean isConsumed() {
+    return maxDownloads <= 0;
+  }
 }
