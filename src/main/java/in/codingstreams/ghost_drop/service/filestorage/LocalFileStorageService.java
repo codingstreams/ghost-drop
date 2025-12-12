@@ -1,8 +1,9 @@
 package in.codingstreams.ghost_drop.service.filestorage;
 
+import in.codingstreams.ghost_drop.config.FileStorageProperties;
 import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -18,17 +19,17 @@ import java.util.UUID;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class LocalFileStorageService implements FileStorageService {
-  @Value("${file.upload-dir}")
-  private String uploadDir;
+  private final FileStorageProperties fileStorageProperties;
 
   @Override
   @PostConstruct
   public void init() {
     log.info("Initializing upload directory...");
 
-    if (uploadDir != null) {
-      var uploadDirPath = Path.of(uploadDir);
+    if (fileStorageProperties.getUploadDir() != null) {
+      var uploadDirPath = Path.of(fileStorageProperties.getUploadDir());
       log.debug("Upload directory path resolved to: {}", uploadDirPath);
 
       try {
@@ -68,7 +69,7 @@ public class LocalFileStorageService implements FileStorageService {
       var fileName = UUID.randomUUID() + "-" + Path.of(filePath).getFileName();
       log.debug("Generated unique filename: {}", fileName);
 
-      Path destination = Path.of(uploadDir, fileName);
+      Path destination = Path.of(fileStorageProperties.getUploadDir(), fileName);
       Files.copy(fileInputStream, destination, StandardCopyOption.REPLACE_EXISTING);
 
       log.info("File successfully stored at: {}", destination.toAbsolutePath());

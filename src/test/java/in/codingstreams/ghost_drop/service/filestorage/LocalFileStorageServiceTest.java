@@ -1,15 +1,16 @@
 package in.codingstreams.ghost_drop.service.filestorage;
 
+import in.codingstreams.ghost_drop.config.FileStorageProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.util.FileSystemUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -20,22 +21,24 @@ import java.nio.file.Path;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest
-@ActiveProfiles("test")
+@ExtendWith(MockitoExtension.class)
 public class LocalFileStorageServiceTest {
-  @Autowired
-  private LocalFileStorageService fileStorageService;
+  @Mock
+  private FileStorageProperties fileStorageProperties;
 
-  @Value("${file.upload-dir}")
-  private String uploadDir;
+  @InjectMocks
+  private LocalFileStorageService fileStorageService;
 
   private Path uploadDirPath;
 
   @BeforeEach
   void setUp() throws IOException {
-    if (this.uploadDir != null) {
-      this.uploadDirPath = Path.of(this.uploadDir);
+    when(fileStorageProperties.getUploadDir()).thenReturn("test-uploads/");
+
+    if (fileStorageProperties.getUploadDir() != null) {
+      this.uploadDirPath = Path.of(fileStorageProperties.getUploadDir());
       Files.createDirectories(this.uploadDirPath);
     }
   }
