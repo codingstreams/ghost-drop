@@ -29,7 +29,7 @@ public class FileMetadata {
   @Column(nullable = false)
   private String storagePath;
 
-  @Column(nullable = false)
+  @Column(nullable = false, unique = true)
   private String accessCode;
 
   @Builder.Default
