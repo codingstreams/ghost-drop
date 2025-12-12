@@ -16,3 +16,10 @@ spring:
 
 file:
   upload-dir: test-uploads/
+
+server:
+  address: 0.0.0.0
+  port: 5767
+
+app:
+  base-url: http://fruitloop.local
