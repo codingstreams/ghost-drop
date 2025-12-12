@@ -14,6 +14,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -23,10 +24,12 @@ import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 public class FileSharingServiceTest {
+  public static final String BASE_URL = "http://localhost:8080/";
   @Mock
   private FileStorageProperties fileStorageProperties;
 
@@ -53,34 +56,45 @@ public class FileSharingServiceTest {
     when(clock.instant()).thenReturn(fixedInstant);
     when(clock.getZone()).thenReturn(ZoneOffset.UTC);
 
-    when(appConfigProperties.getBaseUrl()).thenReturn("http://localhost/");
+    when(appConfigProperties.getBaseUrl()).thenReturn(BASE_URL);
   }
 
   @Test
   @DisplayName("should store file when valid file is provided")
   void shouldStoreFile_whenValidFileIsProvided() {
-    // Given
-    MockMultipartFile mockFile = new MockMultipartFile(
-        "file", "hello.txt", "text/plain", "Hello World".getBytes()
-    );
+    try (var mocked = mockStatic(FileAccessCodeUtils.class)) {
+      mocked.when(FileAccessCodeUtils::generateAccessCode).thenReturn("XGH-123");
 
-    var accessCode = FileAccessCodeUtils.generateAccessCode();
-    var fileName = accessCode + "-reports.pdf";
+      // Given
+      MockMultipartFile mockFile = new MockMultipartFile(
+          "file", "hello.txt", "text/plain", "Hello World".getBytes()
+      );
 
-    when(fileStorageService.store(mockFile)).thenReturn(fileName);
+      var accessCode = FileAccessCodeUtils.generateAccessCode();
+      var fileName = accessCode + "-reports.pdf";
 
-    var fileMetadata = FileMetadata.builder()
-        .fileName(fileName)
-        .accessCode(accessCode)
-        .expiryDate(Timestamp.valueOf(LocalDateTime.now(this.clock).plusDays(1)))
-        .build();
+      when(fileStorageService.store(mockFile)).thenReturn(fileName);
 
-    when(fileMetadataRepo.save(any(FileMetadata.class))).thenReturn(fileMetadata);
+      var fileMetadata = FileMetadata.builder()
+          .fileName(fileName)
+          .accessCode(accessCode)
+          .expiryDate(Timestamp.valueOf(LocalDateTime.now(this.clock).plusDays(1)))
+          .build();
 
-    // When
-    var fileUploadResponse = fileSharingService.uploadFile(mockFile);
+      when(fileMetadataRepo.save(any(FileMetadata.class))).thenReturn(fileMetadata);
+      var downloadUrl = UriComponentsBuilder.fromUriString(BASE_URL)
+          .path("/download/")
+          .path(accessCode)
+          .toUriString();
 
-    // Then
-    assertEquals(fileName, fileUploadResponse.fileName());
+      // When
+      var fileUploadResponse = fileSharingService.uploadFile(mockFile);
+
+      // Then
+      assertEquals(fileName, fileUploadResponse.fileName());
+      assertEquals(downloadUrl, fileUploadResponse.downloadUrl());
+    }
+
+
   }
 }

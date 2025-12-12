@@ -31,10 +31,10 @@ public class FileSharingServiceImpl implements FileSharingService {
   @Override
   public FileUploadResponse uploadFile(MultipartFile file) {
     var fileName = fileStorageService.store(file);
-    var storagePath = Path.of(this.fileStorageProperties.getUploadDir(), fileName).toString();
+    var storagePath = Path.of(fileStorageProperties.getUploadDir(), fileName).toString();
     var accessCode = FileAccessCodeUtils.generateAccessCode();
 
-    var downloadUrl = UriComponentsBuilder.fromPath(appConfigProperties.getBaseUrl())
+    var downloadUrl = UriComponentsBuilder.fromUriString(appConfigProperties.getBaseUrl())
         .path("/download/")
         .path(accessCode)
         .toUriString();
