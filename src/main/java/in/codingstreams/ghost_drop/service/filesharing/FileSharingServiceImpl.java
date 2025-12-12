@@ -32,7 +32,7 @@ public class FileSharingServiceImpl implements FileSharingService {
   public FileUploadResponse uploadFile(MultipartFile file) {
     var fileName = fileStorageService.store(file);
     var storagePath = Path.of(fileStorageProperties.getUploadDir(), fileName).toString();
-    var accessCode = FileAccessCodeUtils.generateAccessCode();
+    var accessCode = generateUniqueAccessCode();
 
     var downloadUrl = UriComponentsBuilder.fromUriString(appConfigProperties.getBaseUrl())
         .path("/download/")
@@ -69,5 +69,18 @@ public class FileSharingServiceImpl implements FileSharingService {
   @Override
   public FileUploadResponse getFileInfo(String accessCode) {
     return null;
+  }
+
+  private String generateUniqueAccessCode() {
+    int tryCount = 100;
+
+    while (tryCount-- > 0) {
+      String accessCode = FileAccessCodeUtils.generateAccessCode();
+      if (!fileMetadataRepo.existsByAccessCode(accessCode)) {
+        return accessCode;
+      }
+    }
+
+    throw new IllegalStateException("Unable to generate unique access code after 100 attempts");
   }
 }

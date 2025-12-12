@@ -8,4 +8,6 @@ import java.util.UUID;
 
 public interface FileMetadataRepo extends JpaRepository<FileMetadata, UUID> {
   Optional<FileMetadata> findByAccessCode(String accessCode);
+
+  boolean existsByAccessCode(String accessCode);
 }
