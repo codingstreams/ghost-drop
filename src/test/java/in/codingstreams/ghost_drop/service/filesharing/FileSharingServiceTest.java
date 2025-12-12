@@ -66,8 +66,9 @@ public class FileSharingServiceTest {
       mocked.when(FileAccessCodeUtils::generateAccessCode).thenReturn("XGH-123");
 
       // Given
+      var originalFilename = "hello.txt";
       MockMultipartFile mockFile = new MockMultipartFile(
-          "file", "hello.txt", "text/plain", "Hello World".getBytes()
+          "file", originalFilename, "text/plain", "Hello World".getBytes()
       );
 
       var accessCode = FileAccessCodeUtils.generateAccessCode();
@@ -76,7 +77,7 @@ public class FileSharingServiceTest {
       when(fileStorageService.store(mockFile)).thenReturn(fileName);
 
       var fileMetadata = FileMetadata.builder()
-          .fileName(fileName)
+          .fileName(originalFilename)
           .accessCode(accessCode)
           .expiryDate(Timestamp.valueOf(LocalDateTime.now(this.clock).plusDays(1)))
           .build();
@@ -91,7 +92,7 @@ public class FileSharingServiceTest {
       var fileUploadResponse = fileSharingService.uploadFile(mockFile);
 
       // Then
-      assertEquals(fileName, fileUploadResponse.fileName());
+      assertEquals(originalFilename, fileUploadResponse.fileName());
       assertEquals(downloadUrl, fileUploadResponse.downloadUrl());
     }
 

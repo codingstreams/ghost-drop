@@ -103,7 +103,7 @@ public class LocalFileStorageServiceTest {
     MultipartFile mockFile = Mockito.mock(MultipartFile.class);
     Mockito.when(mockFile.getOriginalFilename()).thenReturn("hello.txt");
     Mockito.when(mockFile.isEmpty()).thenReturn(false);
-    Mockito.when(mockFile.getInputStream()).thenThrow(new IOException("No space left on device"));
+    Mockito.when(mockFile.getInputStream()).thenThrow(new RuntimeException("No space left on device"));
 
     assertThrowsExactly(RuntimeException.class, () -> fileStorageService.store(mockFile));
   }
