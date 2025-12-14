@@ -11,7 +11,6 @@ import in.codingstreams.ghost_drop.service.filestorage.FileStorageService;
 import in.codingstreams.ghost_drop.util.FileAccessCodeUtils;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -73,7 +72,7 @@ public class FileSharingServiceImpl implements FileSharingService {
     fileMetadataRepo.save(fileMetadata);
 
     var filePath = Path.of(fileStorageProperties.getUploadDir(), fileMetadata.getStoragePath());
-    var resource = new FileSystemResource(filePath);
+    var resource = fileStorageService.load(filePath);
 
     return new FileDownloadWrapper(
         resource,

@@ -4,6 +4,7 @@ import in.codingstreams.ghost_drop.config.FileStorageProperties;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -81,13 +82,17 @@ public class LocalFileStorageService implements FileStorageService {
   }
 
   @Override
-  public Resource load(String path) {
-    return null;
+  public Resource load(Path path) {
+    return new FileSystemResource(path);
   }
 
   @Override
-  public boolean delete(String path) {
-    return false;
+  public boolean delete(Path path) {
+    try {
+      return Files.deleteIfExists(path);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   @Override

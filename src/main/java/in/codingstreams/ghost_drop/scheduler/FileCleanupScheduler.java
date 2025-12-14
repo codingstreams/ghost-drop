@@ -3,12 +3,12 @@ package in.codingstreams.ghost_drop.scheduler;
 import in.codingstreams.ghost_drop.config.FileStorageProperties;
 import in.codingstreams.ghost_drop.model.FileMetadata;
 import in.codingstreams.ghost_drop.repo.FileMetadataRepo;
+import in.codingstreams.ghost_drop.service.filestorage.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.time.Clock;
@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 public class FileCleanupScheduler {
   private final FileMetadataRepo fileMetadataRepo;
   private final FileStorageProperties fileStorageProperties;
+  private final FileStorageService fileStorageService;
   private final Clock clock;
 
   @Scheduled(cron = "0 * * * * *") // every minute
@@ -35,7 +36,7 @@ public class FileCleanupScheduler {
     for (FileMetadata file : expiredOrConsumedFiles) {
       var filePath = Path.of(fileStorageProperties.getUploadDir(), file.getStoragePath());
       try {
-        boolean deleted = Files.deleteIfExists(filePath);
+        boolean deleted = fileStorageService.delete(filePath);
 
         if (deleted) {
           log.info("Deleted file '{}' at path {}", file.getFileName(), filePath);
