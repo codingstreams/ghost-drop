@@ -1,6 +1,7 @@
 package in.codingstreams.ghost_drop.service.filestorage;
 
 import in.codingstreams.ghost_drop.config.FileStorageProperties;
+import in.codingstreams.ghost_drop.exception.ResourceNotFoundException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -83,7 +84,13 @@ public class LocalFileStorageService implements FileStorageService {
 
   @Override
   public Resource load(Path path) {
-    return new FileSystemResource(path);
+    var resource = new FileSystemResource(path);
+
+    if (!resource.exists()) {
+      throw new ResourceNotFoundException(path.toString());
+    }
+
+    return resource;
   }
 
   @Override

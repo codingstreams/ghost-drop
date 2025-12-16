@@ -1,7 +1,9 @@
 package in.codingstreams.ghost_drop.controller;
 
 import in.codingstreams.ghost_drop.dto.FileUploadResponse;
+import in.codingstreams.ghost_drop.model.CustomMultipartFile;
 import in.codingstreams.ghost_drop.service.filesharing.FileSharingService;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -18,13 +20,14 @@ public class FileSharingController {
   private final FileSharingService fileSharingService;
 
   @PostMapping("/upload")
-  public ResponseEntity<FileUploadResponse> uploadFile(@RequestParam("file") MultipartFile file) {
-    var response = fileSharingService.uploadFile(file);
+  public ResponseEntity<@NonNull FileUploadResponse> uploadFile(@RequestParam("file") MultipartFile file) {
+    var uploadedMultipartFile = new CustomMultipartFile(file);
+    var response = fileSharingService.uploadFile(uploadedMultipartFile);
     return ResponseEntity.ok(response);
   }
 
   @GetMapping("/download/{accessCode}")
-  public ResponseEntity<Resource> downloadFile(@PathVariable String accessCode) {
+  public ResponseEntity<@NonNull Resource> downloadFile(@PathVariable String accessCode) {
     var wrapper = fileSharingService.getFile(accessCode);
 
     return ResponseEntity.ok()
@@ -34,7 +37,7 @@ public class FileSharingController {
   }
 
   @GetMapping("/{accessCode}/info")
-  public ResponseEntity<FileUploadResponse> getFileInfo(@PathVariable String accessCode) {
+  public ResponseEntity<@NonNull FileUploadResponse> getFileInfo(@PathVariable String accessCode) {
     return ResponseEntity.ok(fileSharingService.getFileInfo(accessCode));
   }
 }

@@ -4,6 +4,9 @@ import in.codingstreams.ghost_drop.config.AppConfigProperties;
 import in.codingstreams.ghost_drop.config.FileStorageProperties;
 import in.codingstreams.ghost_drop.dto.FileDownloadWrapper;
 import in.codingstreams.ghost_drop.dto.FileUploadResponse;
+import in.codingstreams.ghost_drop.exception.FileExpiredException;
+import in.codingstreams.ghost_drop.exception.MaxDownloadsExceededException;
+import in.codingstreams.ghost_drop.exception.RecordNotFoundException;
 import in.codingstreams.ghost_drop.model.FileMetadata;
 import in.codingstreams.ghost_drop.repo.FileMetadataRepo;
 import in.codingstreams.ghost_drop.service.expiry.FileExpiryService;
@@ -66,13 +69,13 @@ public class FileSharingServiceImpl implements FileSharingService {
   public FileDownloadWrapper getFile(String accessCode) {
     var fileMetadata = getFileMetadata(accessCode);
 
+    var filePath = Path.of(fileMetadata.getStoragePath());
+    var resource = fileStorageService.load(filePath);
+
     // Update maxDownloads
     var maxDownloads = fileMetadata.getMaxDownloads();
     fileMetadata.setMaxDownloads(maxDownloads - 1);
     fileMetadataRepo.save(fileMetadata);
-
-    var filePath = Path.of(fileStorageProperties.getUploadDir(), fileMetadata.getStoragePath());
-    var resource = fileStorageService.load(filePath);
 
     return new FileDownloadWrapper(
         resource,
@@ -95,7 +98,7 @@ public class FileSharingServiceImpl implements FileSharingService {
     );
   }
 
-  private String generateUniqueAccessCode() {
+  public String generateUniqueAccessCode() {
     int tryCount = 100;
 
     while (tryCount-- > 0) {
@@ -110,15 +113,15 @@ public class FileSharingServiceImpl implements FileSharingService {
 
   private FileMetadata getFileMetadata(String accessCode) {
     var fileMetadata = fileMetadataRepo.findByAccessCode(accessCode)
-        .orElseThrow(() -> new RuntimeException("No matching found file for access code: " + accessCode));
+        .orElseThrow(() -> new RecordNotFoundException(accessCode));
 
     var expiryDate = fileMetadata.getExpiryDate();
     if (fileExpiryService.isExpired(expiryDate)) {
-      throw new RuntimeException("File is expired for access code: " + accessCode + ". File will be deleted shortly.");
+      throw new FileExpiredException(accessCode);
     }
 
     if (fileMetadata.isConsumed()) {
-      throw new RuntimeException("Max downloads exhausted for access code: " + accessCode + ". File will be deleted shortly.");
+      throw new MaxDownloadsExceededException(accessCode);
     }
     return fileMetadata;
   }

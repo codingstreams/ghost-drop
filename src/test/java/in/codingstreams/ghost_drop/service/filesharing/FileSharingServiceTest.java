@@ -8,6 +8,7 @@ import in.codingstreams.ghost_drop.service.filestorage.FileStorageService;
 import in.codingstreams.ghost_drop.util.FileAccessCodeUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -23,6 +24,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrowsExactly;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
@@ -48,54 +50,96 @@ public class FileSharingServiceTest {
   @InjectMocks
   private FileSharingServiceImpl fileSharingService;
 
-  @BeforeEach
-  void setUp() {
-    when(fileStorageProperties.getUploadDir()).thenReturn("test-uploads/");
+  @Nested
+  @DisplayName("access code generation test")
+  class AccessCodeGenerationTest {
+    @Test
+    @DisplayName("should return access code when there is no collision")
+    void shouldReturnAccessCode_whenNoCollision() {
+      try (var mocked = mockStatic(FileAccessCodeUtils.class)) {
+        mocked.when(FileAccessCodeUtils::generateAccessCode).thenReturn("XGH-123");
 
-    Instant fixedInstant = Instant.parse("2025-01-01T00:00:00Z");
-    when(clock.instant()).thenReturn(fixedInstant);
-    when(clock.getZone()).thenReturn(ZoneOffset.UTC);
+        var accessCode = FileAccessCodeUtils.generateAccessCode();
 
-    when(appConfigProperties.getBaseUrl()).thenReturn(BASE_URL);
-  }
+        when(fileMetadataRepo.existsByAccessCode(accessCode)).thenReturn(false);
 
-  @Test
-  @DisplayName("should store file when valid file is provided")
-  void shouldStoreFile_whenValidFileIsProvided() {
-    try (var mocked = mockStatic(FileAccessCodeUtils.class)) {
-      mocked.when(FileAccessCodeUtils::generateAccessCode).thenReturn("XGH-123");
+        var actual = fileSharingService.generateUniqueAccessCode();
 
-      // Given
-      var originalFilename = "hello.txt";
-      MockMultipartFile mockFile = new MockMultipartFile(
-          "file", originalFilename, "text/plain", "Hello World".getBytes()
-      );
-
-      var accessCode = FileAccessCodeUtils.generateAccessCode();
-      var fileName = accessCode + "-reports.pdf";
-
-      when(fileStorageService.store(mockFile)).thenReturn(fileName);
-
-      var fileMetadata = FileMetadata.builder()
-          .fileName(originalFilename)
-          .accessCode(accessCode)
-          .expiryDate(Timestamp.valueOf(LocalDateTime.now(this.clock).plusDays(1)))
-          .build();
-
-      when(fileMetadataRepo.save(any(FileMetadata.class))).thenReturn(fileMetadata);
-      var downloadUrl = UriComponentsBuilder.fromUriString(BASE_URL)
-          .path("/download/")
-          .path(accessCode)
-          .toUriString();
-
-      // When
-      var fileUploadResponse = fileSharingService.uploadFile(mockFile);
-
-      // Then
-      assertEquals(originalFilename, fileUploadResponse.fileName());
-      assertEquals(downloadUrl, fileUploadResponse.downloadUrl());
+        assertEquals(accessCode, actual);
+      }
     }
 
+    @Test
+    @DisplayName("should throw IllegalStateException when unable to generate access code after 100 tries")
+    void shouldThrowException_whenCollisionFor100Tries() {
+      try (var mocked = mockStatic(FileAccessCodeUtils.class)) {
+        mocked.when(FileAccessCodeUtils::generateAccessCode).thenReturn("XGH-123");
 
+        var accessCode = FileAccessCodeUtils.generateAccessCode();
+
+        when(fileMetadataRepo.existsByAccessCode(accessCode)).thenReturn(true);
+
+        assertThrowsExactly(IllegalStateException.class,
+            () -> fileSharingService.generateUniqueAccessCode());
+      }
+    }
+
+    @Nested
+    @DisplayName("file sharing service core logic test")
+    class CoreLogicTests {
+      @BeforeEach
+      void setUp() {
+        when(fileStorageProperties.getUploadDir()).thenReturn("test-uploads/");
+
+        Instant fixedInstant = Instant.parse("2025-01-01T00:00:00Z");
+        when(clock.instant()).thenReturn(fixedInstant);
+        when(clock.getZone()).thenReturn(ZoneOffset.UTC);
+
+        when(appConfigProperties.getBaseUrl()).thenReturn(BASE_URL);
+      }
+
+      @Test
+      @DisplayName("should store file when valid file is provided")
+      void shouldStoreFile_whenValidFileIsProvided() {
+        try (var mocked = mockStatic(FileAccessCodeUtils.class)) {
+          mocked.when(FileAccessCodeUtils::generateAccessCode).thenReturn("XGH-123");
+
+          // Given
+          var originalFilename = "hello.txt";
+          MockMultipartFile mockFile = new MockMultipartFile(
+              "file", originalFilename, "text/plain", "Hello World".getBytes()
+          );
+
+          var accessCode = FileAccessCodeUtils.generateAccessCode();
+          var fileName = accessCode + "-reports.pdf";
+
+          when(fileStorageService.store(mockFile)).thenReturn(fileName);
+
+
+          var expiryDateTime = LocalDateTime.now(clock).plusDays(1);
+
+          var fileMetadata = FileMetadata.builder()
+              .fileName(originalFilename)
+              .accessCode(accessCode)
+              .expiryDate(Timestamp.valueOf(expiryDateTime))
+              .build();
+
+          when(fileMetadataRepo.save(any(FileMetadata.class))).thenReturn(fileMetadata);
+          var downloadUrl = UriComponentsBuilder.fromUriString(BASE_URL)
+              .path("/download/")
+              .path(accessCode)
+              .toUriString();
+
+          // When
+          var fileUploadResponse = fileSharingService.uploadFile(mockFile);
+
+          // Then
+          assertEquals(originalFilename, fileUploadResponse.fileName());
+          assertEquals(downloadUrl, fileUploadResponse.downloadUrl());
+          assertEquals(accessCode, fileUploadResponse.accessCode());
+          assertEquals(expiryDateTime, fileUploadResponse.expiresAt());
+        }
+      }
+    }
   }
 }

@@ -1,6 +1,5 @@
 package in.codingstreams.ghost_drop.scheduler;
 
-import in.codingstreams.ghost_drop.config.FileStorageProperties;
 import in.codingstreams.ghost_drop.model.FileMetadata;
 import in.codingstreams.ghost_drop.repo.FileMetadataRepo;
 import in.codingstreams.ghost_drop.service.filestorage.FileStorageService;
@@ -19,7 +18,6 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class FileCleanupScheduler {
   private final FileMetadataRepo fileMetadataRepo;
-  private final FileStorageProperties fileStorageProperties;
   private final FileStorageService fileStorageService;
   private final Clock clock;
 
@@ -34,7 +32,7 @@ public class FileCleanupScheduler {
     }
 
     for (FileMetadata file : expiredOrConsumedFiles) {
-      var filePath = Path.of(fileStorageProperties.getUploadDir(), file.getStoragePath());
+      var filePath = Path.of(file.getStoragePath());
       try {
         boolean deleted = fileStorageService.delete(filePath);
 

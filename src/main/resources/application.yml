@@ -33,3 +33,6 @@ server:
 
 app:
   base-url: http://localhost:5767
+
+error-docs:
+  url: http://fruitloop.local:5768/errors
